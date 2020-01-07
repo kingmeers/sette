@@ -15,12 +15,16 @@ class Sette:
         cards = pydealer.Deck(ranks=self.new_ranks['sette'])
         cards.shuffle()
         deck = pydealer.Stack()
-        remove = ["8", "9", "10"]
+
+        cards_to_remove = ["8", "9", "10"]
+
         playing_cards = []
 
         for card in cards:
-            if str(card.value) not in remove:
+            if str(card.value) not in cards_to_remove:
                 playing_cards.append(card)
+            else:
+                print("Remove all cards matching: {} from the deck...".format(str(card.value)))
 
         deck.add(playing_cards, end="top")
 
@@ -60,6 +64,10 @@ class Sette:
 
         self.players = temp_players
 
+number_of_players = 3
+print("–––––––– Initialising Sette e Mezzo –––––––– ")
 s = Sette()
-s.getPlayers(3)
+print("–––––––– Adding {} players to the game –––––––– ".format(number_of_players))
+s.getPlayers(number_of_players)
+print("–––––––– Handing out cards to all the players –––––––– ")
 s.handOutCards()
