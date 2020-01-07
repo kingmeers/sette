@@ -49,6 +49,7 @@ class Sette:
             ))
 
     def handOutCards(self):
+        # TODO: Make sure to always hand out the dealer's card LAST
         temp_players = []
 
         for player in self.players:
@@ -69,5 +70,6 @@ print("–––––––– Initialising Sette e Mezzo –––––––
 s = Sette()
 print("–––––––– Adding {} players to the game –––––––– ".format(number_of_players))
 s.getPlayers(number_of_players)
+# TODO: Pick dealer by dealing cards and seeing who gets the first ACE!
 print("–––––––– Handing out cards to all the players –––––––– ")
 s.handOutCards()
