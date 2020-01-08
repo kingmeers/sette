@@ -81,7 +81,7 @@ class Sette:
 
     def getPlayers(self, number_of_players):
         player = {
-            "hand": None,
+            "hand": pydealer.Stack(),
             "chips": self.initial_chips
         }
 
@@ -136,13 +136,17 @@ class Sette:
                 if self.deck.size is 0:
                     self.rebuild()
 
+                hand = pydealer.Stack()
+
                 card = self.deck.deal()
+
+                hand.add(card)
 
                 temp_players.append(pydash.assign(
                     {},
                     player,
                     {
-                        "hand": card
+                        "hand": hand
                     }
                 ))
 
@@ -151,26 +155,42 @@ class Sette:
                 if self.deck.size is 0:
                     self.rebuild()
 
+                hand = pydealer.Stack()
+
                 card = self.deck.deal()
+
+                hand.add(card)
 
                 temp_players.append(pydash.assign(
                     {},
                     player,
                     {
-                        "hand": card
+                        "hand": hand
                     }
                 ))
 
         self.players = temp_players
 
-    def count(self, player_id):
+    def count(self, player_id, extra_cards = []):
         count = 0
 
-        for player in self.players:
-            if player_id is player["id"]:
-                for card in player["hand"]._cards:
-                    count += self.ranks["sette"][card.value]
+        if extra_cards:
+            for player in self.players:
+                if player_id is player["id"]:
+                    hand = pydealer.Stack()
 
+                    hand.add(player["hand"])
+
+                    for card in extra_cards:
+                        hand.add(card)
+
+                    for card in hand:
+                        count += self.ranks["sette"][card.value]
+        else:
+            for player in self.players:
+                if player_id is player["id"]:
+                    for card in player["hand"]:
+                        count += self.ranks["sette"][card.value]
 
         return count
 
@@ -220,19 +240,30 @@ class Sette:
 
         return hand
 
+    def isPlayerBroken(self, player_id, extra_cards):
+        for player in self.players:
+            if player["id"] is player_id:
+                return self.count(player_id, extra_cards) > 7.5
+
     def outcome(self):
         round_outcome = {}
+        temp_players = self.players
         dealer_count = 0
+        player_counts = {}
+        extra_cards = {}
 
         for player in self.players:
+            extra_cards[player["id"]] = []
+
+        for player in temp_players:
+            player_counts[player["id"]] = {}
+
             if self.dealer_id is player["id"]:
                 dealer_count = self.count(player["id"])
-                cards = self.cards_list(player["hand"])
 
-                self.cards(player["id"], True, cards)
-
-        for player in self.players:
+        for player in temp_players:
             if self.dealer_id is not player["id"]:
+                player_option = ""
                 count = self.count(player["id"])
                 cards = self.cards_list(player["hand"])
 
@@ -240,18 +271,108 @@ class Sette:
 
                 print(
                     """
-
      They placed a bet of {} chips
                     """.format(self.bet(player["id"], count))
                 )
 
+                print("""
 
-                if dealer_count >= count:
-                    outcome = self.OUTCOMES["LOSS"]
-                else:
-                    outcome = self.OUTCOMES["WIN"]
+    ============================================================
+            HERE YOU CAN SELECT IF YOU WANT MORE CARDS
 
-                round_outcome[player["id"]] = outcome
+                    (h) for HIT, (p) for PASS
+    ============================================================
+
+                """)
+
+                is_broken = self.isPlayerBroken(player["id"], extra_cards[player["id"]])
+
+                while player_option is not "p" and not is_broken:
+                    player_option = input("Player >> ")
+
+                    if player_option is "p":
+                        pass
+                    elif player_option is "h":
+                        card = self.deck.deal()
+
+                        extra_cards[player["id"]].append(card)
+
+                        hand = pydealer.Stack()
+
+                        hand.add(player["hand"])
+
+                        for card in extra_cards[player["id"]]:
+                            hand.add(card)
+
+                        self.cards(player["id"], False, self.cards_list(hand))
+
+                        is_broken = self.isPlayerBroken(player["id"], extra_cards[player["id"]])
+
+                        if is_broken:
+                            self.broken(player["id"])
+
+                count = self.count(player["id"], extra_cards[player["id"]])
+
+                player_counts[player["id"]]["count"] = count
+                player_counts[player["id"]]["is_broken"] = is_broken
+
+        for player in temp_players:
+            if self.dealer_id is player["id"]:
+                player_option = ""
+                dealer_count = self.count(player["id"])
+                cards = self.cards_list(player["hand"])
+
+                self.cards(player["id"], True, cards)
+
+                print("""
+
+    ============================================================
+             THE DEALER IS NOW DECIDING TO HIT OR PASS
+
+                    (h) for HIT, (p) for PASS
+    ============================================================
+
+                """)
+
+                is_dealer_broken = self.isPlayerBroken(player["id"], extra_cards[player["id"]])
+
+                while player_option is not "p" and not is_dealer_broken:
+                    player_option = input("Dealer >> ")
+
+                    if player_option is "p":
+                        pass
+                    elif player_option is "h":
+                        card = self.deck.deal()
+
+                        extra_cards[player["id"]].append(card)
+
+                        hand = pydealer.Stack()
+
+                        hand.add(player["hand"])
+
+                        for card in extra_cards[player["id"]]:
+                            hand.add(card)
+
+                        self.cards(player["id"], False, self.cards_list(hand))
+
+                        is_dealer_broken = self.isPlayerBroken(player["id"], extra_cards[player["id"]])
+
+                        if is_dealer_broken:
+                            self.broken(player["id"])
+
+                for opponent in self.players:
+                    if self.dealer_id is not opponent["id"]:
+                        if (
+                            player_counts[opponent["id"]]["is_broken"] or
+                            dealer_count >= player_counts[opponent["id"]]["count"]
+                        ) and not is_dealer_broken:
+                            print(opponent["id"], "Recorded LOSS")
+                            outcome = self.OUTCOMES["LOSS"]
+                        else:
+                            print(opponent["id"], "Recorded WIN")
+                            outcome = self.OUTCOMES["WIN"]
+
+                        round_outcome[opponent["id"]] = outcome
 
         return round_outcome
 
@@ -363,7 +484,7 @@ class Sette:
 # ============================================================================================ #
                                         Game {}
 # ============================================================================================ #
-            """.format(game_number)
+            """.format(game_number + 1)
         )
 
     def queen_of_hearts(self):
@@ -424,6 +545,29 @@ class Sette:
                     Welcome to Sette e Mezzo in Python!
 
         """)
+
+    def broken(self, player_id):
+        print("""
+
+         ____________________
+        /                    \\
+        |     Player {}       |
+        |     has broken!     |
+        \\____________________/
+                 !  !
+                 !  !
+                 L_ !
+                / _)!
+               / /__L
+         _____/ (____)
+                (____)
+         _____  (____)
+              \\_(____)
+                 !  !
+                 !  !
+                 \\__/
+
+        """.format(player_id))
 
     def leaderboard(self):
         print(
@@ -542,7 +686,7 @@ class Sette:
                 self.handOutCards()
                 self.round()
 
-                input("")
+                input("ROUND COMPLETE")
 
     def run(self, games):
         self.title()
