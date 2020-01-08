@@ -14,12 +14,8 @@ class Sette:
         self.dealer_id = 0
         self.number_of_players = 9
         self.has_QH_been_played = False
-        self.bet = 10
         self.initial_chips = 100
-        self.STATS = {
-            "dealer_wins": 0,
-            "dealer_losses": 0
-        }
+        self.stats = {}
         self.CONSTANTS = {
             "QUEEN_OF_HEARTS": "QH"
         }
@@ -28,6 +24,40 @@ class Sette:
             "LOSS": "loss",
             "DOUBLE": "double"
         }
+        self.bets = [
+            {
+                "count": 0.5,
+                "chips": 10
+            },
+            {
+                "count": 1,
+                "chips": 10
+            },
+            {
+                "count": 2,
+                "chips": 10
+            },
+            {
+                "count": 3,
+                "chips": 10
+            },
+            {
+                "count": 4,
+                "chips": 10
+            },
+            {
+                "count": 5,
+                "chips": 30
+            },
+            {
+                "count": 6,
+                "chips": 50
+            },
+            {
+                "count": 7,
+                "chips": 70
+            }
+        ]
 
     def generateDeck(self):
         cards = pydealer.Deck(ranks=self.ranks['sette'])
@@ -64,11 +94,13 @@ class Sette:
                 }
             ))
 
+            self.stats[id] = {
+                "dealer_wins": 0,
+                "dealer_losses": 0
+            }
+
     def chooseDealer(self):
         self.dealer_id = random.choice(pydash.pluck(self.players, "id"))
-
-        print("––")
-        print(pydash.pluck(self.players, "id"))
 
         print("Chose the dealer, player {}".format(self.dealer_id))
 
@@ -82,7 +114,7 @@ class Sette:
                     self.rebuild()
 
                 card = self.deck.deal()
-                print("Handing out card ({}) to player {}, {} cards left in the deck".format(card, player["id"], self.deck.size))
+
                 temp_players.append(pydash.assign(
                     {},
                     player,
@@ -97,7 +129,7 @@ class Sette:
                     self.rebuild()
 
                 card = self.deck.deal()
-                print("Handing out card ({}) to dealer with id: {}, {} cards left in the deck".format(card, player["id"], self.deck.size))
+
                 temp_players.append(pydash.assign(
                     {},
                     player,
@@ -156,35 +188,36 @@ class Sette:
             if self.dealer_id is not player["id"]:
 
                 if outcome[player["id"]] is self.OUTCOMES["WIN"]:
-                    self.STATS["dealer_losses"] += 1
+                    self.stats[player["id"]]["dealer_losses"] += 1
 
-                    dealer_pot -= self.bet
-                    print(player["chips"], "Player {} won {} chips".format(player["id"], self.bet))
+                    dealer_pot -= self.bet(player["id"], self.count(player["id"]))
 
-                    new_chips = player["chips"] + self.bet
+                    print(player["chips"], "Player {} won {} chips".format(player["id"], self.bet(player["id"], self.count(player["id"]))))
+
+                    new_chips = player["chips"] + self.bet(player["id"], self.count(player["id"]))
 
                     if new_chips > 0:
                         temp_players.append(pydash.assign(
                             {},
                             player,
                             {
-                                "chips": player["chips"] + self.bet
+                                "chips": player["chips"] + self.bet(player["id"], self.count(player["id"]))
                             }
                         ))
                 elif outcome[player["id"]] is self.OUTCOMES["LOSS"]:
-                    # TODO: If player has no more chips, remove him from temp_players
-                    self.STATS["dealer_wins"] += 1
+                    self.stats[player["id"]]["dealer_wins"] += 1
 
-                    dealer_pot += self.bet
-                    print(player["chips"], "Player {} lost {} chips".format(player["id"], self.bet))
+                    dealer_pot += self.bet(player["id"], self.count(player["id"]))
 
-                    new_chips = player["chips"] - self.bet
+                    print(player["chips"], "Player {} lost {} chips".format(player["id"], self.bet(player["id"], self.count(player["id"]))))
+
+                    new_chips = player["chips"] - self.bet(player["id"], self.count(player["id"]))
                     if new_chips > 0:
                         temp_players.append(pydash.assign(
                             {},
                             player,
                             {
-                                "chips": player["chips"] - self.bet
+                                "chips": player["chips"] - self.bet(player["id"], self.count(player["id"]))
                             }
                         ))
                 else:
@@ -192,8 +225,6 @@ class Sette:
 
         for player in self.players:
             if self.dealer_id is player["id"]:
-                # TODO: If dealer has no more chips,
-                # remove him from temp_players and choose new dealer
                 new_dealer_chips = player["chips"] + dealer_pot
 
                 if new_dealer_chips > 0:
@@ -212,8 +243,22 @@ class Sette:
         if need_new_dealer:
             self.chooseDealer()
 
-    def bets(self):
-        print("––––––––––– Placing bets –––––––––––")
+    def bet(self, player_id, count):
+        player_chips = 0
+        bet_amount = 0
+
+        for player in self.players:
+            if player_id is player["id"]:
+                player_chips = player["chips"]
+
+        for bet in self.bets:
+            if count == bet["count"]:
+                if player_chips >= bet["chips"]:
+                    bet_amount = bet["chips"]
+                else:
+                    bet_amount = player_chips
+
+        return bet_amount
 
     def rebuild(self):
         self.deck = self.generateDeck()
@@ -239,17 +284,17 @@ class Sette:
                 self.handOutCards()
                 self.round()
 
-    def run(self):
+    def run(self, games):
         self.getPlayers(self.number_of_players)
         self.chooseDealer()
 
-        self.play(1000)
+        self.play(games)
 
         print("––––––––––– STATS –––––––––––")
-        pprint(self.STATS)
+        pprint(self.stats)
         pprint(self.players)
 
 
 print("–––––––– Initialising Sette e Mezzo –––––––– ")
 sette = Sette()
-sette.run()
+sette.run(20)
