@@ -261,42 +261,6 @@ class Sette:
         else:
             return 0
 
-    def goodbye(self, player_id, is_dealer):
-        if is_dealer:
-            print("""
-                            ,     \\    /      ,
-               / \\    )\\__/(     / \\
-              /   \\  (_\\  /_)   /   \\
-         ____/_____\\__\\@  @/___/_____\\____
-        |             |\\../|              |
-        |              \\VV/               |
-        |       The Dealer has fallen     |
-        |_________________________________|
-         |    /\\ /      \\\\       \\ /\\    |
-         |  /   V        ))       V   \\  |
-         |/     `       //        '     \\|
-         `              V                '
-            """)
-        else:
-            print("""
-                       ,  ,
-                       \\\\ \\\\
-                       ) \\\\ \\\\    _p_
-                       )^\\))\\))  /  *\\
-                        \\_|| || / /^`-'
-               __       -\\ \\\\--/ /
-             <'  \\\\___/   ___. )'
-                  `====\\ )___/\\\\
-                       //     `"
-                       \\\\    /  \\
-                       `" +==============+
-                          |  Player      |
-                          |  {}           |
-                          |  has been    |
-                          |  disqualied  |
-                          +==============+
-            """.format(player_id))
-
     def round(self):
         outcome = self.outcome()
         temp_players = []
@@ -371,35 +335,7 @@ class Sette:
                     self.goodbye(player["id"], True)
 
         if self.dealer_chips_amount > 0:
-            print(
-                """
-
-                                   .------.
-                                  (        )
-                                  |~------~|
-                                  |        | .----.
-                                  |         (      )
-                                  |        ||~----~|
-                                  |        ||      |
-                                  |        ||  .-----.
-                                  |        || |._____.'
-                                  |        || |       |
-                                  |   .------.|       |
-                                  |  (        |       |
-                                  |  |~------~|       |
-                                  |  |        |       |
-                   _..----------..|  |  _.-----._     |
-                .-~                ~-..-         -.   |
-                |.                  .||-_       _-|   |
-                |"-..____________..-"||  ~-----~  |   |
-                |                   .`|           |--"
-                 "-..____________..-" `._       _.'
-                                         "-----"
-
-                        💰  The dealer now has {} chips
-
-                """.format(self.dealer_chips_amount)
-            )
+            self.dealer_winnings(self.dealer_chips_amount)
 
         self.players = temp_players
 
@@ -420,6 +356,47 @@ class Sette:
         for player in self.players:
             if player["id"] is self.dealer_id:
                 return player["chips"]
+
+    def game_header(self, game_number):
+        print(
+            """
+# ============================================================================================ #
+                                        Game {}
+# ============================================================================================ #
+            """.format(game_number)
+        )
+
+    def queen_of_hearts(self):
+        print(
+            """
+                                                            .
+                                  .       |         .    .
+                            .  *         -*-          *
+                                 \        |         /   .
+                .    .            .      /^\     .              .    .
+                   *    |\   /\    /\  / / \ \  /\    /\   /|    *
+                 .   .  |  \ \/ /\ \ / /     \ \ / /\ \/ /  | .     .
+                         \ | _ _\/_ _ \_\_ _ /_/_ _\/_ _ \_/
+                           \  *  *  *   \ \/ /  *  *  *  /
+                            ' ~ ~ ~ ~ ~  ~\/~ ~ ~ ~ ~ ~ '
+
+                              The Queen of Hearts came!
+
+
+                                Rebuilding the deck...
+
+                              _____
+                             |A .  | _____
+                             | /.\ ||A ^  | _____
+                             |(_._)|| / \ ||A _  | _____
+                             |  |  || \ / || ( ) ||A_ _ |
+                             |____V||  .  ||(_'_)||( v )|
+                                    |____V||  |  || \ / |
+                                           |____V||  .  |
+                                                  |____V|
+
+            """
+        )
 
     def title(self):
         print("""
@@ -447,6 +424,86 @@ class Sette:
                     Welcome to Sette e Mezzo in Python!
 
         """)
+
+    def leaderboard(self):
+        print(
+            """
+# ============================================================================================ #
+                                        LEADERBOARD
+
+                                  THE WINNER is PLAYER {}
+
+                                      WITH {} CHIPS
+# ============================================================================================ #
+            """.format(self.players[0]["id"], self.players[0]["chips"])
+        )
+
+    def goodbye(self, player_id, is_dealer):
+        if is_dealer:
+            print("""
+                            ,     \\    /      ,
+               / \\    )\\__/(     / \\
+              /   \\  (_\\  /_)   /   \\
+         ____/_____\\__\\@  @/___/_____\\____
+        |             |\\../|              |
+        |              \\VV/               |
+        |       The Dealer has fallen     |
+        |_________________________________|
+         |    /\\ /      \\\\       \\ /\\    |
+         |  /   V        ))       V   \\  |
+         |/     `       //        '     \\|
+         `              V                '
+            """)
+        else:
+            print("""
+                       ,  ,
+                       \\\\ \\\\
+                       ) \\\\ \\\\    _p_
+                       )^\\))\\))  /  *\\
+                        \\_|| || / /^`-'
+               __       -\\ \\\\--/ /
+             <'  \\\\___/   ___. )'
+                  `====\\ )___/\\\\
+                       //     `"
+                       \\\\    /  \\
+                       `" +==============+
+                          |  Player      |
+                          |  {}           |
+                          |  has been    |
+                          |  disqualied  |
+                          +==============+
+            """.format(player_id))
+
+    def dealer_winnings(self, chips):
+        print(
+            """
+
+                               .------.
+                              (        )
+                              |~------~|
+                              |        | .----.
+                              |         (      )
+                              |        ||~----~|
+                              |        ||      |
+                              |        ||  .-----.
+                              |        || |._____.'
+                              |        || |       |
+                              |   .------.|       |
+                              |  (        |       |
+                              |  |~------~|       |
+                              |  |        |       |
+               _..----------..|  |  _.-----._     |
+            .-~                ~-..-         -.   |
+            |.                  .||-_       _-|   |
+            |"-..____________..-"||  ~-----~  |   |
+            |                   .`|           |--"
+             "-..____________..-" `._       _.'
+                                     "-----"
+
+                    💰  The dealer now has {} chips
+
+            """.format(chips)
+        )
 
     def bet(self, player_id, count):
         player_chips = 0
@@ -476,47 +533,10 @@ class Sette:
 
         for game in range(games + 1):
             if len(self.players) > 1:
-                print(
-                    """
-    # ============================================================================================ #
-                                                Game {}
-    # ============================================================================================ #
-                    """.format(game)
-                )
+                self.game_header(game)
 
                 if not self.QHStillInPlay():
-
-
-                    print(
-                        """
-                                                                        .
-                                              .       |         .    .
-                                        .  *         -*-          *
-                                             \        |         /   .
-                            .    .            .      /^\     .              .    .
-                               *    |\   /\    /\  / / \ \  /\    /\   /|    *
-                             .   .  |  \ \/ /\ \ / /     \ \ / /\ \/ /  | .     .
-                                     \ | _ _\/_ _ \_\_ _ /_/_ _\/_ _ \_/
-                                       \  *  *  *   \ \/ /  *  *  *  /
-                                        ' ~ ~ ~ ~ ~  ~\/~ ~ ~ ~ ~ ~ '
-
-                                          The Queen of Hearts came!
-
-
-                                            Rebuilding the deck...
-
-                                          _____
-                                         |A .  | _____
-                                         | /.\ ||A ^  | _____
-                                         |(_._)|| / \ ||A _  | _____
-                                         |  |  || \ / || ( ) ||A_ _ |
-                                         |____V||  .  ||(_'_)||( v )|
-                                                |____V||  |  || \ / |
-                                                       |____V||  .  |
-                                                              |____V|
-
-                        """.format(game)
-                    )
+                    self.queen_of_hearts()
                     self.rebuild()
 
                 self.handOutCards()
@@ -528,18 +548,7 @@ class Sette:
         self.title()
         self.getPlayers(self.number_of_players)
         self.play(games)
-
-        print(
-            """
-# ============================================================================================ #
-                                        LEADERBOARD
-
-                                  THE WINNER is PLAYER {}
-
-                                      WITH {} CHIPS
-# ============================================================================================ #
-            """.format(self.players[0]["id"], self.players[0]["chips"])
-        )
+        self.leaderboard()
 
 sette = Sette()
 sette.run(10000)
