@@ -13,7 +13,7 @@ class Sette:
         self.players = []
         self.dealer_id = 0
         self.dealer_chips_amount = 0
-        self.number_of_players = 5
+        self.number_of_players = 14
         self.has_QH_been_played = False
         self.initial_chips = 100
         self.stats = {}
@@ -245,6 +245,12 @@ class Sette:
             if player["id"] is player_id:
                 return self.count(player_id, extra_cards) > 7.5
 
+    def pick_option(self, count):
+        if count < 5:
+            return "h"
+        else:
+            return "p"
+
     def outcome(self):
         round_outcome = {}
         temp_players = self.players
@@ -267,6 +273,15 @@ class Sette:
                 count = self.count(player["id"])
                 cards = self.cards_list(player["hand"])
 
+
+                print("""
+    ============================================================
+            HERE YOU CAN SELECT IF YOU WANT MORE CARDS
+
+                    (h) for HIT, (p) for PASS
+    ============================================================
+                """)
+
                 self.cards(player["id"], False, cards)
 
                 print(
@@ -275,20 +290,11 @@ class Sette:
                     """.format(self.bet(player["id"], count))
                 )
 
-                print("""
-
-    ============================================================
-            HERE YOU CAN SELECT IF YOU WANT MORE CARDS
-
-                    (h) for HIT, (p) for PASS
-    ============================================================
-
-                """)
-
                 is_broken = self.isPlayerBroken(player["id"], extra_cards[player["id"]])
 
-                while player_option is not "p" and not is_broken:
-                    player_option = input("Player >> ")
+                while player_option is not "p" and not is_broken and self.deck.size:
+                    # player_option = input(">> ")
+                    player_option = self.pick_option(count)
 
                     if player_option is "p":
                         pass
@@ -306,12 +312,13 @@ class Sette:
 
                         self.cards(player["id"], False, self.cards_list(hand))
 
+                        count = self.count(player["id"], extra_cards[player["id"]])
+
                         is_broken = self.isPlayerBroken(player["id"], extra_cards[player["id"]])
 
                         if is_broken:
                             self.broken(player["id"])
 
-                count = self.count(player["id"], extra_cards[player["id"]])
 
                 player_counts[player["id"]]["count"] = count
                 player_counts[player["id"]]["is_broken"] = is_broken
@@ -325,19 +332,17 @@ class Sette:
                 self.cards(player["id"], True, cards)
 
                 print("""
-
     ============================================================
              THE DEALER IS NOW DECIDING TO HIT OR PASS
 
                     (h) for HIT, (p) for PASS
     ============================================================
-
                 """)
 
                 is_dealer_broken = self.isPlayerBroken(player["id"], extra_cards[player["id"]])
 
-                while player_option is not "p" and not is_dealer_broken:
-                    player_option = input("Dealer >> ")
+                while player_option is not "p" and not is_dealer_broken and self.deck.size:
+                    player_option = self.pick_option(dealer_count)
 
                     if player_option is "p":
                         pass
@@ -355,6 +360,8 @@ class Sette:
 
                         self.cards(player["id"], False, self.cards_list(hand))
 
+                        dealer_count = self.count(player["id"], extra_cards[player["id"]])
+
                         is_dealer_broken = self.isPlayerBroken(player["id"], extra_cards[player["id"]])
 
                         if is_dealer_broken:
@@ -366,10 +373,8 @@ class Sette:
                             player_counts[opponent["id"]]["is_broken"] or
                             dealer_count >= player_counts[opponent["id"]]["count"]
                         ) and not is_dealer_broken:
-                            print(opponent["id"], "Recorded LOSS")
                             outcome = self.OUTCOMES["LOSS"]
                         else:
-                            print(opponent["id"], "Recorded WIN")
                             outcome = self.OUTCOMES["WIN"]
 
                         round_outcome[opponent["id"]] = outcome
@@ -686,7 +691,7 @@ class Sette:
                 self.handOutCards()
                 self.round()
 
-                input("ROUND COMPLETE")
+                # input("ROUND COMPLETE")
 
     def run(self, games):
         self.title()
