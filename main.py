@@ -12,7 +12,8 @@ class Sette:
         self.deck = self.generateDeck()
         self.players = []
         self.dealer_id = 0
-        self.number_of_players = 4
+        self.number_of_players = 9
+        self.has_QH_been_played = False
         self.bet = 10
         self.initial_chips = 100
         self.STATS = {
@@ -64,7 +65,10 @@ class Sette:
             ))
 
     def chooseDealer(self):
-        self.dealer_id = random.choice(range(1, len(self.players) + 1))
+        self.dealer_id = random.choice(pydash.pluck(self.players, "id"))
+
+        print("––")
+        print(pydash.pluck(self.players, "id"))
 
         print("Chose the dealer, player {}".format(self.dealer_id))
 
@@ -146,6 +150,7 @@ class Sette:
         print("–––––––– Exchanging money –––––––– ")
         temp_players = []
         dealer_pot = 0
+        need_new_dealer = False
 
         for player in self.players:
             if self.dealer_id is not player["id"]:
@@ -154,58 +159,91 @@ class Sette:
                     self.STATS["dealer_losses"] += 1
 
                     dealer_pot -= self.bet
-                    print("Player {} won {} chips".format(player["id"], dealer_pot))
+                    print(player["chips"], "Player {} won {} chips".format(player["id"], self.bet))
 
-                    temp_players.append(pydash.assign(
-                        {},
-                        player,
-                        {
-                            "chips": player["chips"] + self.bet
-                        }
-                    ))
+                    new_chips = player["chips"] + self.bet
+
+                    if new_chips > 0:
+                        temp_players.append(pydash.assign(
+                            {},
+                            player,
+                            {
+                                "chips": player["chips"] + self.bet
+                            }
+                        ))
                 elif outcome[player["id"]] is self.OUTCOMES["LOSS"]:
+                    # TODO: If player has no more chips, remove him from temp_players
                     self.STATS["dealer_wins"] += 1
 
                     dealer_pot += self.bet
-                    print("Player {} lost {} chips".format(player["id"], dealer_pot))
+                    print(player["chips"], "Player {} lost {} chips".format(player["id"], self.bet))
 
-                    temp_players.append(pydash.assign(
-                        {},
-                        player,
-                        {
-                            "chips": player["chips"] - self.bet
-                        }
-                    ))
+                    new_chips = player["chips"] - self.bet
+                    if new_chips > 0:
+                        temp_players.append(pydash.assign(
+                            {},
+                            player,
+                            {
+                                "chips": player["chips"] - self.bet
+                            }
+                        ))
                 else:
                     dealer_pot += 0
 
         for player in self.players:
             if self.dealer_id is player["id"]:
-                temp_players.append(pydash.assign(
-                    {},
-                    player,
-                    {
-                        "chips": player["chips"] + dealer_pot
-                    }
-                ))
+                # TODO: If dealer has no more chips,
+                # remove him from temp_players and choose new dealer
+                new_dealer_chips = player["chips"] + dealer_pot
+
+                if new_dealer_chips > 0:
+                    temp_players.append(pydash.assign(
+                        {},
+                        player,
+                        {
+                            "chips": player["chips"] + dealer_pot
+                        }
+                    ))
+                else:
+                    need_new_dealer = True
 
         self.players = temp_players
 
-        print(self.dealer_id)
+        if need_new_dealer:
+            self.chooseDealer()
+
+    def bets(self):
+        print("––––––––––– Placing bets –––––––––––")
 
     def rebuild(self):
         self.deck = self.generateDeck()
 
+    def QHStillInPlay(self):
+        return self.deck.find("Queen of Hearts")
+
+    def play(self, games):
+        for game in range(games + 1):
+            if len(self.players) > 1:
+                print(
+                    """
+    # ======================================================================== #
+    #                                 Game {}                                  #
+    # ======================================================================== #
+                    """.format(game)
+                )
+
+                if not self.QHStillInPlay():
+                    print("The Queen of Hearts came, rebuilding the deck.....")
+                    self.rebuild()
+
+                self.handOutCards()
+                self.round()
+
     def run(self):
         self.getPlayers(self.number_of_players)
         self.chooseDealer()
-        self.handOutCards()
 
-        for game in range(2000):
-            print("There are {} cards left".format(self.deck.size))
-            self.round()
-
-            self.handOutCards()
+        self.play(1000)
 
         print("––––––––––– STATS –––––––––––")
         pprint(self.STATS)
