@@ -13,7 +13,7 @@ class Sette:
         self.players = []
         self.dealer_id = 0
         self.dealer_chips_amount = 0
-        self.number_of_players = 325
+        self.number_of_players = 5
         self.has_QH_been_played = False
         self.initial_chips = 100
         self.stats = {}
@@ -86,7 +86,6 @@ class Sette:
         }
 
         for id in range(1, number_of_players + 1):
-            print("Adding player {}...".format(id))
             self.players.append(pydash.assign(
                 {},
                 player,
@@ -101,13 +100,35 @@ class Sette:
             }
 
     def chooseDealer(self):
-        pprint(self.players)
         self.dealer_id = random.choice(pydash.pluck(self.players, "id"))
 
-        print("Chose the dealer, player {}".format(self.dealer_id))
+        print(
+            """
+
+        ===================================
+        ||                               ||
+        ||    Picking a new dealer...    ||
+        ||                               ||
+        ===================================
+
+
+          _____
+         |A .  | _____
+         | /.\ ||A ^  | _____
+         |(_._)|| / \ ||A _  | _____
+         |  |  || \ / || ( ) ||A_ _ |
+         |____V||  .  ||(_'_)||( v )|
+                |____V||  |  || \ / |
+                       |____V||  .  |
+                              |____V|
+
+
+          The dealer is now Player {}
+
+            """.format(self.dealer_id)
+        )
 
     def handOutCards(self):
-        print("–––––––––––––– Handing out cards ––––––––––––––")
         temp_players = []
 
         for player in self.players:
@@ -153,21 +174,77 @@ class Sette:
 
         return count
 
+    def cards(self, player_id, is_dealer, nonDealerHand):
+        strNonDealerHand = []
+        for index, card in enumerate(nonDealerHand):
+            nonDealerCard = """
+     ┌─────────┐
+     │{}        │
+     │         │
+     │         │
+     │    {}    │
+     │         │
+     │         │
+     │        {}│
+     └─────────┘""".format(card[0], card[1], card[0]).split('\n')
+            strNonDealerHand.append(nonDealerCard)
+
+        if is_dealer:
+            print("    # ===================== Player {} ===================== #".format(player_id))
+            print("                           The Dealer                       ")
+        else:
+            print("")
+            print("    # ===================== Player {} ===================== #".format(player_id))
+
+        for i in zip(*strNonDealerHand):
+            print(" ".join(i))
+
+    def suit_emoji(self, suit):
+        emojis = {
+            "C": "♧",
+            "D": "♢",
+            "H": "♡",
+            "S": "♤"
+        }
+
+        return emojis[suit]
+
+    def cards_list(self, cards):
+        hand = []
+
+        for card in cards._cards:
+            hand.append([
+                card.abbrev[0],
+                self.suit_emoji(card.abbrev[1])
+            ])
+
+        return hand
+
     def outcome(self):
-        print("–––––––– Checking everyones card VS dealer ––––––––")
         round_outcome = {}
         dealer_count = 0
 
         for player in self.players:
             if self.dealer_id is player["id"]:
                 dealer_count = self.count(player["id"])
-                print("Chips: {}, The dealer has {}".format(player["chips"], dealer_count))
+                cards = self.cards_list(player["hand"])
+
+                self.cards(player["id"], True, cards)
 
         for player in self.players:
             if self.dealer_id is not player["id"]:
                 count = self.count(player["id"])
+                cards = self.cards_list(player["hand"])
 
-                print("Chips: {}, Player {} has {}".format(player["chips"], player["id"], count))
+                self.cards(player["id"], False, cards)
+
+                print(
+                    """
+
+     They placed a bet of {} chips
+                    """.format(self.bet(player["id"], count))
+                )
+
 
                 if dealer_count >= count:
                     outcome = self.OUTCOMES["LOSS"]
@@ -184,17 +261,59 @@ class Sette:
         else:
             return 0
 
+    def goodbye(self, player_id, is_dealer):
+        if is_dealer:
+            print("""
+                            ,     \\    /      ,
+               / \\    )\\__/(     / \\
+              /   \\  (_\\  /_)   /   \\
+         ____/_____\\__\\@  @/___/_____\\____
+        |             |\\../|              |
+        |              \\VV/               |
+        |       The Dealer has fallen     |
+        |_________________________________|
+         |    /\\ /      \\\\       \\ /\\    |
+         |  /   V        ))       V   \\  |
+         |/     `       //        '     \\|
+         `              V                '
+            """)
+        else:
+            print("""
+                       ,  ,
+                       \\\\ \\\\
+                       ) \\\\ \\\\    _p_
+                       )^\\))\\))  /  *\\
+                        \\_|| || / /^`-'
+               __       -\\ \\\\--/ /
+             <'  \\\\___/   ___. )'
+                  `====\\ )___/\\\\
+                       //     `"
+                       \\\\    /  \\
+                       `" +==============+
+                          |  Player      |
+                          |  {}           |
+                          |  has been    |
+                          |  disqualied  |
+                          +==============+
+            """.format(player_id))
+
     def round(self):
         outcome = self.outcome()
-        print("–––––––– Exchanging money –––––––– ")
         temp_players = []
         need_new_dealer = False
 
         self.dealer_chips_amount = self.dealer_chips()
 
-        for player in self.players:
-            print("––––– Player {} –––––".format(player["id"]))
+        print(
+        """
+    ||==============||
+    || GAME RESULTS ||
+    ||==============||
+        """
+        )
 
+
+        for player in self.players:
             if self.dealer_id is not player["id"]:
                 bet = self.bet(player["id"], self.count(player["id"]))
 
@@ -203,9 +322,9 @@ class Sette:
 
                     new_chips = player["chips"] + self.validateBet(self.dealer_return(self.dealer_chips_amount, bet))
 
-                    self.dealer_chips_amount -= self.validateBet(self.dealer_return(self.dealer_chips_amount, bet))
+                    print("    🃏  Player {} won {} chips and now has {} in total.".format(player["id"], self.validateBet(self.dealer_return(self.dealer_chips_amount, bet)), new_chips))
 
-                    print(player["chips"], "Player {} won {} chips = {}".format(player["id"], bet, new_chips))
+                    self.dealer_chips_amount -= self.validateBet(self.dealer_return(self.dealer_chips_amount, bet))
 
                     temp_players.append(pydash.assign(
                         {},
@@ -221,7 +340,7 @@ class Sette:
 
                     self.dealer_chips_amount += bet
 
-                    print(player["chips"], "Player {} lost {} chips = {}".format(player["id"], bet, new_chips))
+                    print("    🃏  Player {} lost {} chips and now has {} in total.".format(player["id"], bet, new_chips))
 
                     if new_chips > 0:
                         temp_players.append(pydash.assign(
@@ -231,12 +350,12 @@ class Sette:
                                 "chips": new_chips
                             }
                         ))
+                    else:
+                        self.goodbye(player["id"], False)
 
         for player in self.players:
             if self.dealer_id is player["id"]:
                 new_dealer_chips = self.validateBet(self.dealer_chips_amount)
-
-                print("Dealer chips: ", new_dealer_chips)
 
                 if new_dealer_chips > 0:
                     temp_players.append(pydash.assign(
@@ -249,12 +368,43 @@ class Sette:
                 else:
                     need_new_dealer = True
 
+                    self.goodbye(player["id"], True)
+
+        if self.dealer_chips_amount > 0:
+            print(
+                """
+
+                                   .------.
+                                  (        )
+                                  |~------~|
+                                  |        | .----.
+                                  |         (      )
+                                  |        ||~----~|
+                                  |        ||      |
+                                  |        ||  .-----.
+                                  |        || |._____.'
+                                  |        || |       |
+                                  |   .------.|       |
+                                  |  (        |       |
+                                  |  |~------~|       |
+                                  |  |        |       |
+                   _..----------..|  |  _.-----._     |
+                .-~                ~-..-         -.   |
+                |.                  .||-_       _-|   |
+                |"-..____________..-"||  ~-----~  |   |
+                |                   .`|           |--"
+                 "-..____________..-" `._       _.'
+                                         "-----"
+
+                        💰  The dealer now has {} chips
+
+                """.format(self.dealer_chips_amount)
+            )
+
         self.players = temp_players
 
         if need_new_dealer:
             self.chooseDealer()
-
-        print("≠≠≠≠≠≠≠≠ TOTAL CHIP COUNT: {} {} ≠≠≠≠≠≠≠≠≠".format(sum(pydash.pluck(self.players, "chips")), pydash.pluck(self.players, "chips")))
 
     def dealer_return(self, dealer_chips_amount, bet_amount):
         bet_amount = bet_amount
@@ -270,6 +420,33 @@ class Sette:
         for player in self.players:
             if player["id"] is self.dealer_id:
                 return player["chips"]
+
+    def title(self):
+        print("""
+
+                                       _____
+           _____                _____ |6    |
+          |2    | _____        |5    || o o |
+          |  o  ||3    | _____ | o o || o o | _____
+          |     || o o ||4    ||  o  || o o ||7    |
+          |  o  ||     || o o || o o ||____9|| o o | _____
+          |____Z||  o  ||     ||____S|       |o o o||8    | _____
+                 |____E|| o o |              | o o ||o o o||9    |
+                        |____h|              |____L|| o o ||o o o|
+                                    _____           |o o o||o o o|
+                            _____  |K  WW|          |____8||o o o|
+                    _____  |Q  ww| | /\\{)|                 |____6|
+             _____ |J  ww| | /\\{(| | \\/%%| _____
+            |10 o || /\\{)| | \\/%%| |  %%%||A ^  |
+            |o o o|| \\/% | |  %%%| |_%%%>|| / \\ |
+            |o o o||   % | |_%%%O|        | \\ / |
+            |o o o||__%%[|                |  .  |
+            |___0I|                       |____V|
+
+
+                    Welcome to Sette e Mezzo in Python!
+
+        """)
 
     def bet(self, player_id, count):
         player_chips = 0
@@ -301,27 +478,68 @@ class Sette:
             if len(self.players) > 1:
                 print(
                     """
-    # ======================================================================== #
-    #                                 Game {}                                  #
-    # ======================================================================== #
+    # ============================================================================================ #
+                                                Game {}
+    # ============================================================================================ #
                     """.format(game)
                 )
 
                 if not self.QHStillInPlay():
-                    print("The Queen of Hearts came, rebuilding the deck.....")
+
+
+                    print(
+                        """
+                                                                        .
+                                              .       |         .    .
+                                        .  *         -*-          *
+                                             \        |         /   .
+                            .    .            .      /^\     .              .    .
+                               *    |\   /\    /\  / / \ \  /\    /\   /|    *
+                             .   .  |  \ \/ /\ \ / /     \ \ / /\ \/ /  | .     .
+                                     \ | _ _\/_ _ \_\_ _ /_/_ _\/_ _ \_/
+                                       \  *  *  *   \ \/ /  *  *  *  /
+                                        ' ~ ~ ~ ~ ~  ~\/~ ~ ~ ~ ~ ~ '
+
+                                          The Queen of Hearts came!
+
+
+                                            Rebuilding the deck...
+
+                                          _____
+                                         |A .  | _____
+                                         | /.\ ||A ^  | _____
+                                         |(_._)|| / \ ||A _  | _____
+                                         |  |  || \ / || ( ) ||A_ _ |
+                                         |____V||  .  ||(_'_)||( v )|
+                                                |____V||  |  || \ / |
+                                                       |____V||  .  |
+                                                              |____V|
+
+                        """.format(game)
+                    )
                     self.rebuild()
 
                 self.handOutCards()
                 self.round()
 
+                input("")
+
     def run(self, games):
+        self.title()
         self.getPlayers(self.number_of_players)
         self.play(games)
 
-        print("––––––––––– STATS –––––––––––")
-        pprint(self.players)
+        print(
+            """
+# ============================================================================================ #
+                                        LEADERBOARD
 
+                                  THE WINNER is PLAYER {}
 
-print("–––––––– Initialising Sette e Mezzo –––––––– ")
+                                      WITH {} CHIPS
+# ============================================================================================ #
+            """.format(self.players[0]["id"], self.players[0]["chips"])
+        )
+
 sette = Sette()
-sette.run(21000)
+sette.run(10000)
